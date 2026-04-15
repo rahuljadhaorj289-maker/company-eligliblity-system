@@ -1,7 +1,9 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session, redirect
 import random, string, json, os
 
 app = Flask(__name__)
+app.secret_key = "secret123"   # required for session
+
 FILE_NAME = "data.json"
 
 # ---------- LOAD ----------
@@ -59,7 +61,7 @@ def company():
 
     return render_template("company.html")
 
-# ---------- CANDIDATE STEP 1 (ENTER KEY) ----------
+# ---------- CANDIDATE (ENTER KEY) ----------
 @app.route("/candidate", methods=["GET", "POST"])
 def candidate():
     if request.method == "POST":
@@ -69,16 +71,35 @@ def candidate():
         if key not in database:
             return "❌ Invalid Key"
 
-        company = database[key]
-        return render_template("exam.html", company=company, key=key)
+        # SAVE KEY IN SESSION
+        session["key"] = key
+
+        return redirect("/exam")
 
     return render_template("candidate.html")
 
-# ---------- EXAM SUBMIT ----------
+# ---------- EXAM PAGE ----------
+@app.route("/exam")
+def exam():
+    # CHECK SESSION
+    if "key" not in session:
+        return redirect("/candidate")
+
+    database = load_data()
+    key = session["key"]
+
+    company = database[key]
+
+    return render_template("exam.html", company=company, key=key)
+
+# ---------- SUBMIT ----------
 @app.route("/submit", methods=["POST"])
 def submit():
+    if "key" not in session:
+        return redirect("/candidate")
+
     database = load_data()
-    key = request.form["key"]
+    key = session["key"]
 
     company = database[key]
 
@@ -109,6 +130,9 @@ def submit():
     )
 
     final_score = (0.4 * academic_avg) + (0.6 * test_score)
+
+    # CLEAR SESSION AFTER EXAM
+    session.pop("key", None)
 
     return render_template("result.html",
                            name=name,
