@@ -1,32 +1,53 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Company</title>
+    <title>Company Panel</title>
 </head>
 <body>
-    <h2>Company Criteria</h2>
 
-    <form method="POST">
-        10th %: <input name="tenth"><br>
-        12th %: <input name="twelfth"><br>
-        Graduation %: <input name="grad"><br>
-        Backlogs: <input name="backlogs"><br><br>
+<h2>Company Setup</h2>
 
-        <h3>Questions</h3>
+<form method="POST">
 
-        Q1: <input name="q1">
-        Answer: <input name="a1">
-        Marks: <input name="m1"><br>
+    <!-- Criteria -->
+    10th %: <input name="tenth" required><br>
+    12th %: <input name="twelfth" required><br>
+    Graduation %: <input name="grad" required><br>
+    Backlogs: <input name="backlogs" required><br><br>
 
-        Q2: <input name="q2">
-        Answer: <input name="a2">
-        Marks: <input name="m2"><br>
+    <!-- Number of Questions -->
+    Number of Questions: 
+    <input type="number" id="numQ" name="num_questions" min="1" required>
+    
+    <button type="button" onclick="generateQuestions()">Generate Questions</button>
 
-        Q3: <input name="q3">
-        Answer: <input name="a3">
-        Marks: <input name="m3"><br><br>
+    <br><br>
 
-        <button type="submit">Create Company</button>
-    </form>
+    <!-- Questions will appear here -->
+    <div id="questions"></div>
+
+    <br>
+    <button type="submit">Create Company</button>
+
+</form>
+
+<script>
+function generateQuestions() {
+    let num = document.getElementById("numQ").value;
+    let container = document.getElementById("questions");
+
+    container.innerHTML = ""; // clear old
+
+    for (let i = 1; i <= num; i++) {
+        container.innerHTML += `
+            <h4>Question ${i}</h4>
+            Question: <input name="q${i}" required><br>
+            Answer: <input name="a${i}" required><br>
+            Marks: <input name="m${i}" required><br><br>
+        `;
+    }
+}
+</script>
+
 </body>
 </html>
