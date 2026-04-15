@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Exam</title>
+</head>
+<body>
+
+<h2>Candidate Exam</h2>
+
+<form method="POST" action="/submit">
+
+    <input type="hidden" name="key" value="{{key}}">
+
+    Name: <input name="name"><br>
+    10th: <input name="tenth"><br>
+    12th: <input name="twelfth"><br>
+    Grad: <input name="grad"><br>
+    Backlogs: <input name="backlogs"><br><br>
+
+    <h3>Questions</h3>
+
+    {% for q in company.questions %}
+        <p>{{loop.index}}. {{q.question}}</p>
+        <input name="ans{{loop.index}}"><br>
+    {% endfor %}
+
+    <button type="submit">Submit Exam</button>
+
+</form>
+
+</body>
+</html>
