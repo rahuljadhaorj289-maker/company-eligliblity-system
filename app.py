@@ -34,6 +34,8 @@ def company():
     if request.method == "POST":
         database = load_data()
 
+        num_q = int(request.form["num_questions"])
+
         company = {
             "10th": float(request.form["tenth"]),
             "12th": float(request.form["twelfth"]),
@@ -42,7 +44,7 @@ def company():
             "questions": []
         }
 
-        for i in range(1, 4):
+        for i in range(1, num_q + 1):
             company["questions"].append({
                 "question": request.form[f"q{i}"],
                 "correct": request.form[f"a{i}"].lower(),
@@ -57,7 +59,7 @@ def company():
 
     return render_template("company.html")
 
-# ---------- CANDIDATE ----------
+# ---------- CANDIDATE STEP 1 (ENTER KEY) ----------
 @app.route("/candidate", methods=["GET", "POST"])
 def candidate():
     if request.method == "POST":
@@ -68,43 +70,52 @@ def candidate():
             return "❌ Invalid Key"
 
         company = database[key]
-
-        name = request.form["name"]
-        tenth = float(request.form["tenth"])
-        twelfth = float(request.form["twelfth"])
-        grad = float(request.form["grad"])
-        backlogs = int(request.form["backlogs"])
-
-        academic_avg = (tenth + twelfth + grad) / 3
-
-        score = 0
-        total = 0
-
-        for i, q in enumerate(company["questions"], start=1):
-            ans = request.form[f"ans{i}"].lower()
-            if ans == q["correct"]:
-                score += q["marks"]
-            total += q["marks"]
-
-        test_score = (score / total) * 100 if total > 0 else 0
-
-        eligible = not (
-            tenth < company["10th"] or
-            twelfth < company["12th"] or
-            grad < company["grad"] or
-            backlogs > company["backlogs"]
-        )
-
-        final_score = (0.4 * academic_avg) + (0.6 * test_score)
-
-        return render_template("result.html",
-                               name=name,
-                               academic=round(academic_avg, 2),
-                               test=round(test_score, 2),
-                               final=round(final_score, 2),
-                               status="Eligible ✅" if eligible and test_score >= 60 else "Not Eligible ❌")
+        return render_template("exam.html", company=company, key=key)
 
     return render_template("candidate.html")
+
+# ---------- EXAM SUBMIT ----------
+@app.route("/submit", methods=["POST"])
+def submit():
+    database = load_data()
+    key = request.form["key"]
+
+    company = database[key]
+
+    name = request.form["name"]
+    tenth = float(request.form["tenth"])
+    twelfth = float(request.form["twelfth"])
+    grad = float(request.form["grad"])
+    backlogs = int(request.form["backlogs"])
+
+    academic_avg = (tenth + twelfth + grad) / 3
+
+    score = 0
+    total = 0
+
+    for i, q in enumerate(company["questions"], start=1):
+        ans = request.form[f"ans{i}"].lower()
+        if ans == q["correct"]:
+            score += q["marks"]
+        total += q["marks"]
+
+    test_score = (score / total) * 100 if total > 0 else 0
+
+    eligible = not (
+        tenth < company["10th"] or
+        twelfth < company["12th"] or
+        grad < company["grad"] or
+        backlogs > company["backlogs"]
+    )
+
+    final_score = (0.4 * academic_avg) + (0.6 * test_score)
+
+    return render_template("result.html",
+                           name=name,
+                           academic=round(academic_avg, 2),
+                           test=round(test_score, 2),
+                           final=round(final_score, 2),
+                           status="Eligible ✅" if eligible and test_score >= 60 else "Not Eligible ❌")
 
 # ---------- RUN ----------
 if __name__ == "__main__":
