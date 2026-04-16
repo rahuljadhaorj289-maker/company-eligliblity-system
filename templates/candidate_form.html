@@ -1,0 +1,22 @@
+<h2>Candidate Form</h2>
+
+<form method="POST" action="/submit">
+
+<input type="hidden" name="key" value="{{ key }}">
+
+Name: <input name="name"><br><br>
+
+10th: <input name="tenth"><br>
+12th: <input name="twelfth"><br>
+Graduation: <input name="grad"><br>
+Backlogs: <input name="backlogs"><br>
+
+<h3>Questions</h3>
+
+{% for q in company.questions %}
+    <p>{{ q.question }}</p>
+    <input type="text" name="ans{{ loop.index }}"><br>
+{% endfor %}
+
+<button type="submit">Submit</button>
+</form>
