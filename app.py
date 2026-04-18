@@ -1,11 +1,7 @@
-from flask import Flask, render_template, request, redirect
-import json
-import os
-import random
-import string
+from flask import Flask, request, render_template_string
+import json, os, random, string
 
 app = Flask(__name__)
-
 FILE_NAME = "data.json"
 
 # ---------- LOAD ----------
@@ -24,61 +20,189 @@ def save_data(data):
 def generate_key():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
+# ---------- COMMON STYLE ----------
+STYLE = """
+<style>
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    margin: 0;
+}
+.container {
+    width: 420px;
+    margin: 60px auto;
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+h2 { text-align:center; }
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin: 6px 0;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+button {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg,#667eea,#764ba2);
+    border: none;
+    color: white;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+button:hover {
+    transform: scale(1.05);
+}
+a {
+    display:block;
+    text-align:center;
+    margin:10px 0;
+    background:#ff7a18;
+    color:white;
+    padding:10px;
+    border-radius:10px;
+    text-decoration:none;
+}
+a:hover { background:#ff5722; }
+</style>
+"""
+
 # ---------- HOME ----------
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return render_template_string(STYLE + """
+    <div class="container">
+        <h2>Company Eligibility System</h2>
+        <a href="/company">Company Panel</a>
+        <a href="/candidate">Candidate Panel</a>
+    </div>
+    """)
 
 # ---------- COMPANY ----------
-@app.route("/company", methods=["GET", "POST"])
+@app.route("/company", methods=["GET","POST"])
 def company():
     if request.method == "POST":
         db = load_data()
 
-        company = {}
-        company["10th"] = float(request.form["tenth"])
-        company["12th"] = float(request.form["twelfth"])
-        company["grad"] = float(request.form["grad"])
-        company["backlogs"] = int(request.form["backlogs"])
+        company = {
+            "10th": float(request.form["tenth"]),
+            "12th": float(request.form["twelfth"]),
+            "grad": float(request.form["grad"]),
+            "backlogs": int(request.form["backlogs"]),
+            "questions":[]
+        }
 
-        questions = []
         n = int(request.form["num"])
 
         for i in range(1, n+1):
-            q = request.form[f"q{i}"]
-            ans = request.form[f"a{i}"].lower()
-            marks = int(request.form[f"m{i}"])
-
-            questions.append({
-                "question": q,
-                "correct": ans,
-                "marks": marks
+            company["questions"].append({
+                "question": request.form[f"q{i}"],
+                "correct": request.form[f"a{i}"].lower(),
+                "marks": int(request.form[f"m{i}"])
             })
-
-        company["questions"] = questions
 
         key = generate_key()
         db[key] = company
         save_data(db)
 
-        return f"✅ Company Created! Share Key: {key}"
+        return render_template_string(STYLE + f"""
+        <div class="container">
+            <h2>✅ Company Created</h2>
+            <h3>Your Key: {key}</h3>
+            <a href="/">Go Home</a>
+        </div>
+        """)
 
-    return render_template("company.html")
+    return render_template_string(STYLE + """
+    <div class="container">
+    <h2>Company Setup</h2>
+
+    <form method="POST">
+    <input name="tenth" placeholder="10th %">
+    <input name="twelfth" placeholder="12th %">
+    <input name="grad" placeholder="Graduation %">
+    <input name="backlogs" placeholder="Max Backlogs">
+    <input name="num" placeholder="Number of Questions">
+
+    <h3>Questions</h3>
+
+    Q1: <input name="q1" placeholder="Question">
+    <input name="a1" placeholder="Answer">
+    <input name="m1" placeholder="Marks">
+
+    Q2: <input name="q2" placeholder="Question">
+    <input name="a2" placeholder="Answer">
+    <input name="m2" placeholder="Marks">
+
+    Q3: <input name="q3" placeholder="Question">
+    <input name="a3" placeholder="Answer">
+    <input name="m3" placeholder="Marks">
+
+    <button type="submit">Create</button>
+    </form>
+    </div>
+    """)
 
 # ---------- ENTER KEY ----------
-@app.route("/candidate", methods=["GET", "POST"])
+@app.route("/candidate", methods=["GET","POST"])
 def candidate():
     if request.method == "POST":
         key = request.form["key"].upper()
         db = load_data()
 
         if key not in db:
-            return "❌ Invalid Key"
+            return render_template_string(STYLE + """
+            <div class="container">
+            <h3>❌ Invalid Key</h3>
+            <a href="/candidate">Try Again</a>
+            </div>
+            """)
 
         company = db[key]
-        return render_template("candidate_form.html", company=company, key=key)
 
-    return render_template("enter_key.html")
+        questions_html = ""
+        for i, q in enumerate(company["questions"], start=1):
+            questions_html += f"""
+            <p><b>{q['question']}</b></p>
+            <input name="ans{i}" placeholder="Your Answer">
+            """
+
+        return render_template_string(STYLE + f"""
+        <div class="container">
+        <h2>Candidate Form</h2>
+
+        <form method="POST" action="/submit">
+        <input type="hidden" name="key" value="{key}">
+
+        <input name="name" placeholder="Name">
+        <input name="tenth" placeholder="10th %">
+        <input name="twelfth" placeholder="12th %">
+        <input name="grad" placeholder="Graduation %">
+        <input name="backlogs" placeholder="Backlogs">
+
+        <h3>Questions</h3>
+        {questions_html}
+
+        <button type="submit">Submit</button>
+        </form>
+        </div>
+        """)
+
+    return render_template_string(STYLE + """
+    <div class="container">
+    <h2>Enter Company Key</h2>
+    <form method="POST">
+        <input name="key" placeholder="Enter Key">
+        <button type="submit">Start Test</button>
+    </form>
+    </div>
+    """)
 
 # ---------- SUBMIT ----------
 @app.route("/submit", methods=["POST"])
@@ -87,13 +211,12 @@ def submit():
     key = request.form["key"]
     company = db[key]
 
-    name = request.form["name"]
     tenth = float(request.form["tenth"])
     twelfth = float(request.form["twelfth"])
     grad = float(request.form["grad"])
     backlogs = int(request.form["backlogs"])
 
-    academic_avg = (tenth + twelfth + grad) / 3
+    academic = (tenth + twelfth + grad) / 3
 
     score = 0
     total = 0
@@ -104,23 +227,32 @@ def submit():
             score += q["marks"]
         total += q["marks"]
 
-    test_score = (score / total) * 100 if total else 0
+    test = (score/total)*100 if total else 0
 
-    eligible = True
-    if (tenth < company["10th"] or
+    eligible = not (
+        tenth < company["10th"] or
         twelfth < company["12th"] or
         grad < company["grad"] or
-        backlogs > company["backlogs"]):
-        eligible = False
+        backlogs > company["backlogs"]
+    )
 
-    final_score = (0.4 * academic_avg) + (0.6 * test_score)
+    final = (0.4 * academic) + (0.6 * test)
 
-    return render_template("result.html",
-                           name=name,
-                           academic=round(academic_avg,2),
-                           test=round(test_score,2),
-                           final=round(final_score,2),
-                           status="Eligible ✅" if eligible and test_score>=60 else "Not Eligible ❌")
+    status = "Eligible ✅" if eligible and test >= 60 else "Not Eligible ❌"
+
+    return render_template_string(STYLE + f"""
+    <div class="container">
+    <h2>Final Result</h2>
+
+    <p><b>Academic:</b> {round(academic,2)}%</p>
+    <p><b>Test:</b> {round(test,2)}%</p>
+    <p><b>Final:</b> {round(final,2)}%</p>
+
+    <h3>{status}</h3>
+
+    <a href="/">Home</a>
+    </div>
+    """)
 
 # ---------- RUN ----------
 if __name__ == "__main__":
